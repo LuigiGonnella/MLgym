@@ -1,2 +1,2 @@
-# ML_gym
+# MLgym
 Repository to practice ML fundamentals and implementations
