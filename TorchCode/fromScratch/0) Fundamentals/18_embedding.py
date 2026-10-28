@@ -18,3 +18,18 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### AGAIN ####
+class MyEmbedding(nn.Module):
+
+    def __init__(self, n_samples, n_features):
+        super().__init__()
+
+        data = torch.randn((n_samples, n_features))
+        self.W = nn.Parameter(data, requires_grad=True)
+
+
+    def forward(self, indices):
+
+        return self.W[indices]

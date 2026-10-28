@@ -27,3 +27,25 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### AGAIN ####
+
+def rms_norm(
+    x: torch.Tensor,
+    weight: torch.Tensor,
+    eps= 1e-5
+) -> torch.Tensor:
+    """
+    x: (B, d_in)
+    gamma: (d_in, )
+
+    return: (B, d_in)
+    """
+
+    rms = torch.sqrt(torch.mean(torch.square(x), dim = -1, keepdim=True) + eps)
+    x_norm = x / rms
+
+    return weight * x_norm
+
+

@@ -44,3 +44,42 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### AGAIN ####
+
+def my_batch_norm(
+    x,
+    gamma,
+    beta,
+    running_mean,
+    running_var,
+    eps=1e-5,
+    momentum=0.1,
+    training=True,
+) -> torch.Tensor:
+    """
+    x: (B, d_in)
+    gamma: (d_in, )
+    beta: (d_in, )
+
+    return: (B, d_in)
+    """
+
+    correct_mean = running_mean
+    correct_var = running_var
+
+    if training:
+        batch_mean = torch.mean(x, dim = 0, keepdim=True)
+        batch_var = torch.var(x, dim = 0, keepdim=True, unbiased=False)
+
+        running_mean[:] = momentum * running_mean + (1 - momentum) * batch_mean
+        running_var[:] = momentum * running_var + (1 - momentum) * batch_var
+
+        correct_mean = batch_mean
+        correct_var = batch_var
+
+
+    x_norm = (x - correct_mean) / ((correct_var + eps) ** 0.5)
+    return  x_norm * gamma + beta
+    

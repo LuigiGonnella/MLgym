@@ -20,8 +20,6 @@ class MyDropout(nn.Module):
             
             x = x.masked_fill(mask, 0.0) * (1 / (1 - self.p))
         
-            return x
-
         return x
 
 
@@ -31,3 +29,25 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### AGAIN ####
+class MyDropout(nn.Module):
+
+    def __init__(self, p = 0.5):
+        super().__init__()
+
+        self.p = p
+
+    def forward(self, x):
+
+        if self.training:
+
+            mask = torch.rand_like(x) <= self.p
+            x = torch.masked_fill(x, mask, 0.0)
+
+            x = x / (1 - self.p)
+
+
+        return x
+

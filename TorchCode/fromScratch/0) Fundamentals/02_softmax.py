@@ -23,3 +23,19 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### AGAIN ####
+def my_softmax(x: torch.Tensor, dim: int = -1) -> torch.Tensor:
+    """
+    x: (B, d)
+    return: (B, d)
+    """
+
+    maxel = torch.max(x, dim = dim, keepdim=True).values #(B, 1)
+    shifted = x - maxel #(B, d)
+
+    num = torch.exp(shifted) #(B, d)
+    den = torch.sum(shifted, dim = dim, keepdim=True) #(B, 1)
+
+    return num / den

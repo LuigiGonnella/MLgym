@@ -16,3 +16,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+#### AGAIN ####
+
+def relu(x: torch.Tensor) -> torch.Tensor:
+
+    return torch.where(x, x > 0, 0)
