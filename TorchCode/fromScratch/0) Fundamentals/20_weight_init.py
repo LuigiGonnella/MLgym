@@ -12,3 +12,15 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def kaiming_init(weight: torch.Tensor) -> torch.Tensor:
+    """
+    weight: (d_out, d_in)
+    """
+
+    d_in = weight.shape[-1]
+
+    weight[:] = (torch.randn_like(weight) * ((2 / d_in) ** 0.5)).requires_grad_()
+
+    return weight

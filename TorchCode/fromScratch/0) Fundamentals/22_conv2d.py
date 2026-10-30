@@ -54,3 +54,43 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### AGAIN ####
+
+def my_conv2d(x, weight, bias=None, stride=1, padding=0) -> torch.Tensor:
+    """
+    features <--> x: (B, Cin, H, W)
+    kernel <--> weight: (Cout, Cin, kH, kW)
+
+    return: (B, Cout, newH, newW)
+    """
+
+    B, _, H, W = x.shape
+    C_out, _, kH, kW = weight.shape
+
+    if padding != 0:
+        x = F.pad(x, (padding, padding, padding, padding), mode='constant', value=0.0) #last dim on both sides, before last dim on both sides
+
+    newH = (H - kH + 2 * padding) // (stride) + 1
+    newW = (W - kW + 2 * padding) // (stride) + 1
+
+    output = torch.empty((B, C_out, newH, newW))
+
+    weight = weight.unsqueeze(0) #(1, C_out, C_in, kH, kW) --> share the same kernels for all batches
+
+    for i in range(newH):
+        for j in range(newW):
+            startH = i * stride
+            startW = j * stride
+
+            values =  x[:, :, startH:startH + kH, startW:startW + kW].unsqueeze(1) #(B, 1, C_in, kH, kW) --> multiply patch with all kernels
+            conv = torch.sum(values * weight, dim = (2, 3, 4)) #multiply each feature element with the correspondent kernel element, across all C_in, sum them together and assign to each C_out 
+            output[:, :, i, j] = conv
+
+
+    if bias is not None:
+        bias = bias.view(1, -1, 1, 1) #one per kernel
+        output += bias
+
+    return output

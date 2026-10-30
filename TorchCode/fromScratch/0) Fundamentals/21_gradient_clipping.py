@@ -4,7 +4,6 @@ from torch_judge import check
 def clip_grad_norm(parameters: torch.Tensor, max_norm: float) -> torch.Tensor:
     """
     parameters: (np, ...)
-
     return: (np, ...)
     """
 
@@ -25,3 +24,19 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#### AGAIN ####
+def clip_grad_norm(parameters: torch.Tensor, max_norm: float) -> torch.Tensor:
+    """
+    parameters: (np, ...)
+    return: (np, ...)
+    """
+
+    grad_norm = torch.sqrt(sum(torch.sum(p.grad ** 2) for p in parameters)) #inner sum over dim of each param and outer sum over params (python sum since the for generates a "generator" and not a tensor)
+
+    if grad_norm > max_norm:
+        scale = max_norm / grad_norm
+        for p in parameters:
+            p.grad.mul_(scale) #in-place
+
+    return grad_norm
