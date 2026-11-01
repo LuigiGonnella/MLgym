@@ -44,3 +44,43 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#### AGAIN ####
+
+class MultiHeadCrossAttention(nn.Module):
+
+    def __init__(self, d_model, num_heads):
+
+        assert d_model % num_heads == 0
+
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.W_o = nn.Linear(d_model, d_model)
+
+
+    def forward(self, x_enc, x_dec):
+        """
+        x_dec: (B, S_q, d_model)
+        x_enc: (B, S_k, d_model)
+        """
+
+        B, S_q, _ = x_dec.shape
+        S_k = x_enc.shapep[1]
+
+        Q = self.W_q(x_dec).reshape((B, self.num_heads, S_q, self.head_dim)).transpose(1, 2)
+        K = self.W_k(x_enc).reshape((B, self.num_heads, S_k, self.head_dim)).transpose(1, 2)
+        V = self.W_v(x_enc).reshape((B, self.num_heads, S_k, self.head_dim)).transpose(1, 2)
+
+        d_k = K.shape[-1]
+        raw_weights = (Q @ K.transpose(-1, -2)) / (d_k ** 0.5)
+
+        att_weights = torch.softmax(raw_weights, dim = -1) #(B, num_heads, S_q, head_dim)
+
+        hidden = (att_weights @ V).trasnpose(1, 2).reshape((B, S_q, self.d_model))
+
+        return self.W_o(hidden)

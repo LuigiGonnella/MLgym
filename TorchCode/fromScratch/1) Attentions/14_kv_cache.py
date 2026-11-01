@@ -58,3 +58,84 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### AGAIN ####
+
+class KVCacheAttention(nn.Module):
+
+    def __init__(self, d_model, num_heads):
+        assert d_model % num_heads == 0
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model % num_heads
+
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.W_o = nn.Linear(d_model, d_model)
+
+
+    def forward(self, x, cache = None):
+        """
+        cache = (cache_k, cache_v) for this attention layer.
+
+        PREFILL:
+        - Usually starts with an empty cache.
+        - Processes all prompt tokens in parallel.
+        - S_q = S_k = prompt_length (if cache is empty).
+        - Stores their keys and values in the cache.
+
+        DECODE:
+        - Processes one new token at a time.
+        - S_q = 1.
+        - S_k = cached_length + 1.
+        - Reuses previous K/V and appends new K/V.
+
+        MULTI-TURN CONVERSATIONS:
+        - We can reset the cache and prefill the full context (very costly).
+        - Alternatively, reuse the cache if the previous
+        context is an unchanged prefix of the new prompt (meaning a continuation of the same conversation and not a new conversation).
+        - New user tokens can be prefilled using existing K/V --> general decode case with S_q > 1 where each give attention to all the previous ones. 
+        - Summarizing previous turns generally requires rebuilding the cache for the modified context.
+
+        IMPORTANT:
+        - Cache is maintained separately for each layer.
+        - Position encoding and attention masks must account
+        for cached tokens.
+        """
+
+
+        B, S_q, _ = x.shape
+
+        Q = self.W_q(x).reshape((B, S_q, self.num_heads, self.head_dim)).transpose(1, 2) #(B, num_heads, seq, head_dim)
+        K = self.W_k(x).reshape((B, S_q, self.num_heads, self.head_dim)).transpose(1, 2) #(B, num_heads, seq, head_dim)
+        V = self.W_v(x).reshape((B, S_q, self.num_heads, self.head_dim)).transpose(1, 2) #(B, num_heads, seq, head_dim)
+
+        if cache is not None:
+            cache_k, cache_v = cache
+            K = torch.cat([cache_k, K], dim = 2) #increase seq by post-poning
+            V = torch.cat([cache_v, V], dim = 2) #increase seq by post-poning
+
+
+        _, _, S_k, d_k = K.shape
+
+        raw_weights = (Q @ K.transpose(-1, -2)) / (d_k ** 0.5)
+
+        tot_len = S_k
+        past_len = tot_len - S_q
+
+        q_idx = torch.arange(past_len, tot_len).unsqueeze(-1) #(S_q, 1)
+        k_idx = torch.arange(tot_len).unsqueeze(0) #(1, S_k)
+
+        mask = q_idx < k_idx #don't look into the future (future keys)
+
+        raw_weights = torch.masked_fill(raw_weights, mask, float("-inf"))
+
+        att_weights = torch.softmax(raw_weights, dim = -1)
+
+        hidden = (att_weights @ V).transpose(1, 2).reshape((B, S_q, self.d_model))
+
+        return (self.W_o(hidden), (K, V))
+        
+

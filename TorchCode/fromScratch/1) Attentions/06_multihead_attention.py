@@ -42,3 +42,47 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+class MultiHeadAttention(nn.Module):
+
+    def __init__(self, d_model, num_heads):
+        super().__init__()
+
+        self.num_heads = num_heads
+        self.d_model = d_model
+
+        assert d_model % num_heads == 0
+
+        self.head_dim = d_model // num_heads
+
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.W_o = nn.Linear(d_model, d_model)
+
+    def forward(self, Q, K, V):
+        """
+        Q: (batch, seq_len, d_model)
+        K: (batch, seq_len, d_model)
+        V: (batch, seq_len, d_model)
+        """
+
+        B, S_k, _ = K.shape
+
+        S_q = Q.shape[1]
+
+        Q = self.W_q(Q).reshape((B, S_q, self.num_heads, self.head_dim)).transpose(1, 2) #(B, num_heads, seq_len, head_dim)
+        K = self.W_k(K).reshape((B, S_k, self.num_heads, self.head_dim)).transpose(1, 2) #(B, num_heads, seq_len, head_dim)
+        V = self.W_v(V).reshape((B, S_k, self.num_heads, self.head_dim)).transpose(1, 2) #(B, num_heads, seq_len, head_dim)
+
+        d_k = K.shape[-1]
+        raw_weights = (Q @ K.transpose(-1, -2)) / (d_k ** 0.5) #(B, num_heads, S_q, S_k)
+        att_weights = torch.softmax(raw_weights, dim = -1) #same, probs
+
+        hidden = (att_weights @ V).transpose(1, 2).reshape((B, S_q, self.d_model))
+
+        return self.W_o(hidden)
+
+
+        

@@ -21,3 +21,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#### AGAIN ####
+
+def linear_attention(Q, K, V):
+    #from O(S^2 * D) to O(S * D^2)
+
+    def kernel(x):
+        return F.elu(x) + 1
+
+    num = kernel(Q) @ (kernel(K).transpose(-1, -2) @ V) #(B, Sq, d_v)
+    den = kernel(Q) @ (torch.sum(kernel(K), dim = 1)).unsqueeze(-1) #(B, S_q, d_model) @ (B, d_model, 1) --> (B, S_q, 1)
+
+    return num / (den + 1e-10) #(B, Sq, d_v)

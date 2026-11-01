@@ -19,3 +19,20 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### AGAIN ####
+
+def scaled_dot_product_attention(
+    Q: torch.Tensor,  # (batch, seq_q, d_k)
+    K: torch.Tensor,  # (batch, seq_k, d_k)
+    V: torch.Tensor,  # (batch, seq_k, d_v)
+) -> torch.Tensor:   # (batch, seq_q, d_v)
+
+    d_k = K.shape[-1]
+
+    raw_weights = Q @ K.transpose(-1, -2) / (d_k ** 0.5) #(batch, seq_len, seq_len)
+
+    att_weights = torch.softmax(raw_weights, dim = -1) #(batch, seq_len, seq_len)
+
+    return att_weights @ V
