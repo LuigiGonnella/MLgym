@@ -59,3 +59,53 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#### AGAIN ####
+def flash_attention(
+    Q: torch.Tensor,  # (batch, seq_q, d_k)
+    K: torch.Tensor,  # (batch, seq_k, d_k)
+    V: torch.Tensor,  # (batch, seq_k, d_v)
+    block_size=32, 
+) -> torch.Tensor:   # (batch, seq_q, d_v)
+    B, S, d = Q.shape
+    Qblocks = [Q[:, i:i + block_size] for i in range(0, S, block_size)] #if not divisible for block_size last block can have less than that
+    Kblocks = [K[:, i:i + block_size] for i in range(0, S, block_size)] #if not divisible for block_size last block can have less than that
+    Vblocks = [V[:, i:i + block_size] for i in range(0, S, block_size)] #if not divisible for block_size last block can have less than that
+
+    Oblocks = []
+    nk = len(Kblocks)
+
+    for Qblock in Qblocks:
+        q_len = Qblock.shape[1]
+
+        Oi = torch.zeros_like(Qblock) #(B, block_size, d_q)
+        mi = torch.full((B, q_len, 1), float("-inf")) #max logit per row
+        li = torch.zeros((B, q_len, 1)) #sum of exp(logit - max)
+
+        for j in range(nk):
+            Kblock, Vblock = Kblocks[j], Vblocks[j]
+            d_k = Kblock.shape[1]
+
+            raw_logits = (Qblock @ Kblock.transpose(-1, -2)) / (d_k ** 0.5)
+            mij = torch.max(raw_logits, dim = -1, keepdim=True).values #(B, q_len, 1)
+            fij = torch.exp(raw_logits - mij)
+            lij = torch.sum(torch.exp(raw_logits - mij), keepdim=True) #(B, q_len, 1)
+
+            mi_new = torch.maximum(mij, mi)
+            new_scale = torch.exp(mij - mi_new)
+            old_scale = torch.exp(mi - mi_new) 
+
+            li_new = li * old_scale + lij * new_scale
+
+            Oi = (li * Oi * old_scale + new_scale * fij @ Vblock) / li_new
+
+            mi = mi_new
+            li = li_new
+
+        Oblocks.append(Oi)
+
+    return torch.cat(Oblocks, dim = 1)
+
+
+        
