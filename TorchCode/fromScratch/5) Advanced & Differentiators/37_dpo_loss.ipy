@@ -1,0 +1,20 @@
+import torch
+from torch_judge import check
+import torch.nn.functional as F
+
+def dpo_loss(policy_chosen_logps, policy_rejected_logps, ref_chosen_logps, ref_rejected_logps, beta=0.1) -> torch.Tensor:
+  # All inputs: (B,) log-probabilities
+  # Returns: scalar loss
+
+  acc = policy_chosen_logps - ref_chosen_logps
+  rej = policy_rejected_logps - ref_rejected_logps
+
+  loss = - torch.log(F.sigmoid(beta * (acc - rej)))
+
+  return loss.mean()
+
+def main():
+  check("dpo_loss")
+
+if __name__ == "__main__":
+  main()
